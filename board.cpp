@@ -2,61 +2,16 @@
 #include"piece.hpp"
 #include"board.hpp"
 
-#include<iostream>
-
 #include <QDebug>
 
-void Board::view(const Piece &cpiece){
-    int old[4][4] = {{0,0,0,0},
-                     {0,0,0,0},
-                     {0,0,0,0},
-                     {0,0,0,0}};
-    for(int i=currentX; i<currentX+4; i++){
-        for(int j=currentY; j < currentY+4; j++){
-            old[i-currentX][j-currentY] = currentBoard[j*WIDTH+i];
-            if(PIECE[currentPiece.getShape()][currentPiece.getOrientation()][i-currentX][j-currentY]==1){
-                currentBoard[j*WIDTH+i] = currentPiece.getShape();
-            }
-        }
-    }
-    auto start = currentBoard.begin();
-    auto last = currentBoard.end();
-    int ligne = 0;
-    if(start!=last){
-        if(*start==-1)
-            std::cout << " ";
-        else
-            std::cout << *start;
-        start ++;
-        ligne ++;
-        while(start != last){
-            if(ligne==10){
-                ligne = 0;
-                std::cout<< std::endl;
-            } else {
-                std::cout << "|";
-            }
-            ligne ++;
-            if(*start==-1)
-                std::cout << " ";
-            else
-                std::cout << *start;
-            start ++;
-        }
-    }
-    std::cout << std::endl;
-
-    std::cout << std::endl;
-    for(int i=currentX; i<currentX+4; i++){
-        for(int j=currentY; j < currentY+4; j++){
-            if(PIECE[currentPiece.getShape()][currentPiece.getOrientation()][i-currentX][j-currentY]==1)
-                currentBoard[j*WIDTH+i] = old[i-currentX][j-currentY];
-        }
-    }
-}
-
 void Board::clearboard(){
-    //std::vector<int> currentBoard;
+    waiting = false;
+    inGame = false;
+    inPause = false;
+    level = 1;
+    npiece = 0;
+    score = 0;
+    nlines = 0;
     currentBoard.resize(WIDTH*HEIGHT);
     for(int i=0; i<WIDTH*HEIGHT; i++){
         currentBoard[i] = -1;
@@ -79,8 +34,9 @@ void Board::drop(){
 }
 
 void Board::movedown(){
-    if(!trymove(currentPiece, currentX, currentY-1))
+    if(!trymove(currentPiece, currentX, currentY+1)){
         ndropped(0);
+    }
 }
 
 void Board::ndropped(int height){
@@ -101,8 +57,6 @@ void Board::ndropped(int height){
 
     removeline();
     newpiece();
-    std::cout << "Score: " << score << std::endl;
-    std::cout << "Level: " << level << std::endl;
 }
 
 void Board::removeline(){
@@ -110,7 +64,7 @@ void Board::removeline(){
     for(int j = HEIGHT - 1; j>=0; j--){
         bool isfull = true;
         for(int i = 0; i<WIDTH; i++){
-            if(currentBoard[j*WIDTH+i] == -1){
+            if(currentBoard[j*WIDTH+i] == -1 || currentBoard[j*WIDTH+i] == 9){
                 isfull = false;
                 break;
             }
@@ -130,7 +84,22 @@ void Board::removeline(){
     }
     if(nfullline > 0){
         nlines += nfullline;
-        score += 10*nfullline;
+        switch(nfullline) {
+        case 1 :
+            score += level*40;
+            break;
+        case 2:
+            score += level*100;
+            break;
+        case 3:
+            score += level*300;
+            break;
+        case 4:
+            score += level*400;
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -141,16 +110,10 @@ void Board::newpiece()
     currentPiece = nextPiece;
     nextPiece.setrandomShape();
     currentY = - currentPiece.getminY();
-    shownext();
     if(!trymove(currentPiece, currentX, currentY)){
-        std::cout << "End of the game" << std::endl;
         inGame = false;
     }
     waiting = true;
-}
-
-void Board::shownext(){
-    std::cout << "no." << std::endl;
 }
 
 bool Board::trymove(const Piece &newpiece, int nextX, int nextY){
@@ -185,4 +148,99 @@ int Board::getX(){
 
 int Board::getY(){
     return currentY;
+}
+
+// Definition of MultiBoard
+
+void MultiBoard::removeline(){
+    twolines = false;
+    int nfullline = 0;
+    for(int j = HEIGHT - 1; j>=0; j--){
+        bool isfull = true;
+        for(int i = 0; i<WIDTH; i++){
+            if(currentBoard[j*WIDTH+i] == -1 || currentBoard[j*WIDTH+i] == 9){
+                isfull = false;
+                break;
+            }
+        }
+        if(isfull){
+            nfullline ++;
+            for(int k = j-1; k >=0; k--){
+                for(int i=0; i<WIDTH; i++){
+                    currentBoard[(k+1)*WIDTH + i] = currentBoard[k*WIDTH + i];
+                }
+            }
+            for(int i=0; i<WIDTH; i++){
+                currentBoard[0*WIDTH + i] = -1;
+            }
+            j++;
+        }
+    }
+    if(nfullline > 0){
+        nlines += nfullline;
+        switch(nfullline) {
+        case 1 :
+            score += level*40;
+            break;
+        case 2:
+            score += level*100;
+            twolines = true;
+            linedown();
+            break;
+        case 3:
+            score += level*300;
+            twolines = true;
+            linedown();
+            break;
+        case 4:
+            score += level*400;
+            twolines = true;
+            linedown();
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void MultiBoard::plusopponentline()
+{
+    for(int j = 0; j<HEIGHT-1; j++){
+        for(int i=0; i<WIDTH; i++){
+            currentBoard[j*WIDTH + i] = currentBoard[(j+1)*WIDTH + i];
+        }
+    }
+    for(int i=0; i<WIDTH; i++){
+        currentBoard[(HEIGHT-1)*WIDTH + i] = 9;
+    }
+}
+
+void MultiBoard::linedown()
+{
+    if(currentBoard[(HEIGHT-1)*WIDTH] == 9){ // Already lose one line
+        for(int j=HEIGHT-1; j>=0; j--){
+            for(int i=0; i<WIDTH; i++){
+                currentBoard[(j+1)*WIDTH + i] = currentBoard[j*WIDTH + i];
+            }
+        }
+        for(int i=0; i<WIDTH; i++){
+            currentBoard[0*WIDTH + i] = -1;
+        }
+    }
+}
+
+void MultiBoard::clearboard(){
+    waiting = false;
+    inGame = false;
+    inPause = false;
+    level = 1;
+    npiece = 0;
+    score = 0;
+    nlines = 0;
+    twolines = false;
+    victory = false;
+    currentBoard.resize(WIDTH*HEIGHT);
+    for(int i=0; i<WIDTH*HEIGHT; i++){
+        currentBoard[i] = -1;
+    }
 }

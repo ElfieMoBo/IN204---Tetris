@@ -4,16 +4,21 @@
 #include <QDebug>
 #include <QRandomGenerator>
 
-void Piece::setShape(int aShape){
-    shape = aShape;
+Piece Piece::operator=(const Piece& oldPiece)
+{
+    shape = oldPiece.shape;
+    orientation = oldPiece.orientation;
+    x = oldPiece.x;
+    y = oldPiece.y;
+    return *this;
 }
+
 void Piece::setrandomShape(){
     // need to pass from random (usual) to qrandom
     int newShape = QRandomGenerator::global()->bounded(0, 7);
-    qDebug() << "random flower!" << newShape;
     shape = newShape;
 }
-const int Piece::getShape(){
+int Piece::getShape(){
     return shape;
 }
 
@@ -28,22 +33,8 @@ Piece Piece::rotateR(){
     return *this;
 }
 
-const int Piece::getOrientation(){
+int Piece::getOrientation(){
     return orientation;
-}
-
-void Piece::setX(int aX){
-    x = aX;
-}
-const int Piece::getX(){
-    return x;
-}
-
-void Piece::setY(int aY){
-    y = aY;
-}
-const int Piece::getY(){
-    return y;
 }
 
 int Piece::getminX() const{
